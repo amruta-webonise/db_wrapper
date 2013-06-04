@@ -5,7 +5,10 @@
         private static $from = array();
         private static $where = array();
         private static $orderBy = array();
+        private static $join = array();
         private static $limit;
+        private static $count;
+        private static $groupBy;
         private static $query;
         private static $instanceCreated = FALSE;
         private static $connection;
@@ -53,7 +56,6 @@
                 array_push(self::$select,$field);
             }
 //            echo'<pre>';print_r(self::$select); echo '</pre>';
-
             return $this;
         }
 
@@ -85,15 +87,46 @@
             return $this;
         }
 
+
+        public function count(){
+            self::$count = "*";
+            return $this;
+        }
+
+        public function join($join){
+            self::$join=array_merge(self::$join,$join);
+//            echo'<pre>';print_r(self::$join); echo '</pre>';
+            return $this;
+        }
+
+        public function groupBy($groupBy){
+            self::$groupBy = $groupBy;
+            return $this;
+        }
+
         public function getQuery(){
             self::$query = self::getSelect();
+            if(!empty(self::$count))
+                self::$query = self::getCount();
             self::$query = self::getFrom();
+            if(!empty(self::$join))
+                self::$query = self::getJoin();
             if(!empty(self::$where))
                 self::$query = self::getWhere();
             if(!empty(self::$limit))
                 self::$query = self::getLimit();
             if(!empty(self::$orderBy))
                 self::$query = self::getOrderBy();
+            if(!empty(self::$groupBy))
+                self::$query = self::getGroupBy();
+            self::$select=array();
+            self::$from=array();
+            self::$where=array();
+            self::$orderBy=array();
+            self::$limit=null;;
+            self::$count=null;;
+            self::$join=array();;
+            self::$groupBy=null;;
             return self::$query;
         }
 
@@ -167,25 +200,38 @@
                 }
             }
             self::$query .= $cond;
-            echo'<pre>';print_r(self::$query); echo '</pre>';
+//            echo'<pre>';print_r(self::$query); echo '</pre>';
             return self::$query;
         }
+
+        public function getJoin(){
+            self::$query .= " WHERE ";
+            foreach (self::$join as $key => $val) {
+                self::$query .= "$key $val";
+            }
+//            echo'<pre>';print_r(self::$query); echo '</pre>';
+            return self::$query;
+        }
+
+        public function getCount(){
+            if(!empty(self::$select)){
+                self::$query .= ',COUNT('.self::$count.') AS CNT ';
+            }else{
+                self::$query .= 'COUNT('.self::$count.') AS CNT ';
+            }
+            return self::$query;
+        }
+
+        public function getGroupBy(){
+            self::$query .= ' GROUP BY '.self::$groupBy;
+//            echo self::$query;
+            return self::$query;
+        }
+
 
         public function ExecuteQuery($sql)
         {
             return self::$connection->query($sql);
-//            echo '<br/>';
-//            echo '<br/>';
-//            echo '<br/>';
-//            echo 'Array fetching=><br/>';
-//            foreach (self::$connection->query($sql) as $row)
-//            {
-//                echo'<pre>';print_r($row); echo '</pre>';
-//                //                print $row['fname'] . '<br />';
-//            }
-//            echo '<br/>';
-//            echo '<br/>';
-//            echo '<br/>';
         }
 
         public function save($table_name,$data,$conditions=null){
@@ -284,11 +330,7 @@
             }
         }
 
-        public function count($table_name,$group_by){
-//            $sql=null;
-            self::$select .= "SELECT $group_by, COUNT(*) AS CNT FROM $table_name GROUP BY $group_by";
-            return $this;
-        }
+
     }
 
 ?>
